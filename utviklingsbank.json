@@ -524,6 +524,25 @@
     ]
   },
   {
+  "id": "midt_struktur_scanning_balanse",
+  "title": "Struktur, scanning og rollebevissthet",
+  "fase": ["alle_faser"],
+  "utviklingsmaal": "Utvikle bedre romforståelse og struktur ved å scanne mer og bruke arbeidskapasiteten strategisk i lagets balanse.",
+  "trening": [
+    "Scanne før og etter pasning for å forstå helheten i spillet.",
+    "Vurdere om du styrker eller svekker lagets balanse før du flytter deg.",
+    "Holde sentral posisjon når laget trenger struktur bak ball.",
+    "Støtte situasjoner der laget mangler kontroll – ikke bare der ballen er.",
+    "Kommunisere og styre medspillere før du selv forflytter deg."
+  ],
+  "kamp": [
+    "Du er riktig plassert i forhold til ball og medspillere.",
+    "Laget holder bedre avstander sentralt.",
+    "Du bryter spill fordi du har lest situasjonen tidlig.",
+    "Du bruker løpskapasiteten din på riktige tidspunkt."
+  ]
+},
+  {
     "id": "midt_lederskap",
     "title": "Ansvar og kommunikasjon sentralt",
     "fase": ["alle_faser"],
