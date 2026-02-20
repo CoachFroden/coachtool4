@@ -84,7 +84,7 @@ body{
   position:relative;
   background:var(--card);
   border-radius:22px;
-  padding:40px 25px;
+  padding:34px 22px;
   cursor:pointer;
   border:1px solid var(--border);
   backdrop-filter:blur(16px);
@@ -136,13 +136,15 @@ body{
 }
 
 .coach-title{
-  font-size:1.25rem;
+  font-size:1.15rem;
   font-weight:700;
-  margin-bottom:8px;
+  margin-bottom:6px;
+  line-height:1.2;
 }
 
 .coach-desc{
-  font-size:0.95rem;
+  font-size:0.88rem;
+  line-height:1.4;
   color:var(--muted);
 }
 
@@ -179,4 +181,13 @@ body{
   .coach-card{
     padding:30px 20px;
   }
+}
+
+@media(max-width:600px){
+
+  .coach-grid{
+    grid-template-columns: 1fr;
+    gap:30px;
+  }
+
 }
