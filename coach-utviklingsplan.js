@@ -54,20 +54,27 @@ async function loadPlayers() {
     const option = document.createElement("option");
     option.value = docSnap.id;
     option.textContent = data.navn;
-    option.dataset.posisjon = data.posisjon; // 🔥 viktig
+    option.dataset.posisjon = JSON.stringify(data.posisjon || []);
 	option.dataset.uid = data.uid;
 
     playerSelect.appendChild(option);
   });
 }
 
-function fillMainFocusDropdown(posisjon) {
+function fillMainFocusDropdown(posisjoner) {
   mainFocus.innerHTML = '<option value="">Velg utviklingsområde</option>';
 
-  if (!utviklingsbank[posisjon]) return;
+  if (!Array.isArray(posisjoner)) return;
 
-  const rolleOmrader = utviklingsbank[posisjon] || [];
   const fellesOmrader = utviklingsbank["felles_utvikling"] || [];
+
+  let rolleOmrader = [];
+
+  posisjoner.forEach(pos => {
+    if (utviklingsbank[pos]) {
+      rolleOmrader.push(...utviklingsbank[pos]);
+    }
+  });
 
   const alleOmrader = [...rolleOmrader, ...fellesOmrader];
 
@@ -134,9 +141,18 @@ async function loadHistorikk(spillerUid) {
   });
 }
 
-function finnUtviklingsOmrade(omradeId, posisjon) {
-  const rolleOmrader = utviklingsbank[posisjon] || [];
+function finnUtviklingsOmrade(omradeId, posisjoner) {
+
+  if (!Array.isArray(posisjoner)) return null;
+
   const fellesOmrader = utviklingsbank["felles_utvikling"] || [];
+  let rolleOmrader = [];
+
+  posisjoner.forEach(pos => {
+    if (utviklingsbank[pos]) {
+      rolleOmrader.push(...utviklingsbank[pos]);
+    }
+  });
 
   const alleOmrader = [...rolleOmrader, ...fellesOmrader];
 
@@ -150,9 +166,9 @@ mainFocus.addEventListener("change", () => {
   if (!omradeId) return;
 
   const selectedOption = playerSelect.options[playerSelect.selectedIndex];
-  const posisjon = selectedOption.dataset.posisjon;
+  const posisjoner = JSON.parse(selectedOption.dataset.posisjon || "[]");
 
-  const omrade = finnUtviklingsOmrade(omradeId, posisjon);
+  const omrade = finnUtviklingsOmrade(omradeId, posisjoner);
   if (!omrade) return;
 
   // 🔹 Fyll utviklingsmål
@@ -183,11 +199,11 @@ planStatus.style.display = "none";
 if (!selectedOption || !selectedOption.dataset.uid) return;
 
 const spillerUid = selectedOption.dataset.uid;
-const posisjon = selectedOption.dataset.posisjon;
+const posisjoner = JSON.parse(selectedOption.dataset.posisjon || "[]");
 
   const lastUpdated = document.getElementById("lastUpdated");
 
-  fillMainFocusDropdown(posisjon);
+  fillMainFocusDropdown(posisjoner);
   await loadHistorikk(spillerUid);
 
   const planRef = doc(db, "utviklingsplan", spillerUid);

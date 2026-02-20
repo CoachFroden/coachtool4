@@ -50,8 +50,8 @@ body{
 }
 
 .coach-header h1{
-  font-size:42px;
-  font-weight:800;
+  font-size:32px;
+  font-weight:700;
   letter-spacing:0.5px;
   background: linear-gradient(90deg, #fff, #cbd5e1);
   -webkit-background-clip:text;
