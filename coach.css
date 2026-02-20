@@ -1,82 +1,182 @@
-body {
-  margin: 0;
-  font-family: system-ui, -apple-system, sans-serif;
-  background: #0f172a;
-  color: #ffffff;
+/* =========================================
+   PERFORMANCE DASHBOARD STYLE
+========================================= */
+
+:root{
+  --bg-dark:#0b1120;
+  --bg-darker:#070c18;
+  --card:rgba(255,255,255,0.05);
+  --card-hover:rgba(255,255,255,0.08);
+  --border:rgba(255,255,255,0.08);
+
+  --accent:#3b82f6;
+  --accent2:#22c55e;
+  --danger:#ef4444;
+
+  --text:#f8fafc;
+  --muted:#94a3b8;
 }
 
-.coach-container {
-  max-width: 1000px;
-  margin: 0 auto;
-  padding: 40px 20px;
-  text-align: center;
+*{
+  box-sizing:border-box;
+  margin:0;
+  padding:0;
 }
 
-.coach-header {
-  margin-bottom: 40px;
+body{
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  min-height:100vh;
+  color:var(--text);
+
+  background:
+    radial-gradient(circle at 20% 20%, rgba(59,130,246,0.15), transparent 40%),
+    radial-gradient(circle at 80% 30%, rgba(34,197,94,0.12), transparent 40%),
+    linear-gradient(180deg, var(--bg-dark), var(--bg-darker));
 }
 
-.coach-sub {
-  opacity: 0.7;
-  margin-top: 8px;
+/* =========================================
+   Layout
+========================================= */
+
+.coach-container{
+  max-width:1100px;
+  margin:0 auto;
+  padding:60px 20px;
+  text-align:center;
 }
 
-.coach-grid {
-  display: grid;
-  gap: 24px;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  margin-bottom: 50px;
+.coach-header{
+  margin-bottom:50px;
 }
 
-.coach-card {
-  background: #1e293b;
-  border-radius: 16px;
-  padding: 30px 20px;
-  cursor: pointer;
-  transition: 0.2s ease;
-  border: 1px solid rgba(255,255,255,0.06);
+.coach-header h1{
+  font-size:42px;
+  font-weight:800;
+  letter-spacing:0.5px;
+  background: linear-gradient(90deg, #fff, #cbd5e1);
+  -webkit-background-clip:text;
+  color:transparent;
 }
 
-.coach-card:hover {
-  background: #334155;
-  transform: translateY(-4px);
+.coach-sub{
+  color:var(--muted);
+  margin-top:10px;
+  font-size:15px;
 }
 
-.coach-icon {
-  font-size: 2rem;
-  margin-bottom: 12px;
+/* =========================================
+   Grid
+========================================= */
+
+.coach-grid{
+  display:grid;
+  gap:40px;
+  grid-template-columns: repeat(2, 1fr);
+  max-width:800px;
+  margin:0 auto 70px auto;
 }
 
-.coach-title {
-  font-size: 1.2rem;
-  font-weight: 600;
-  margin-bottom: 6px;
+/* =========================================
+   Cards
+========================================= */
+
+.coach-card{
+  position:relative;
+  background:var(--card);
+  border-radius:22px;
+  padding:40px 25px;
+  cursor:pointer;
+  border:1px solid var(--border);
+  backdrop-filter:blur(16px);
+  transition: all 0.3s ease;
+  overflow:hidden;
+    min-height:220px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
 }
 
-.coach-desc {
-  font-size: 0.9rem;
-  opacity: 0.7;
+/* subtle glow effect */
+.coach-card::before{
+  content:"";
+  position:absolute;
+  width:400px;
+  height:400px;
+  background:radial-gradient(circle, rgba(59,130,246,0.25), transparent 60%);
+  top:-200px;
+  left:-200px;
+  transition:0.4s ease;
+  opacity:0;
 }
 
-.logout-btn {
-  padding: 12px 20px;
-  border-radius: 10px;
-  border: none;
-  cursor: pointer;
-  background: #ef4444;
-  color: white;
-  font-size: 0.95rem;
-  transition: 0.2s ease;
+.coach-card:hover::before{
+  opacity:1;
 }
 
-.logout-btn:hover {
-  background: #dc2626;
+.coach-card:hover{
+  transform:translateY(-8px) scale(1.02);
+  background:var(--card-hover);
+  box-shadow:0 30px 80px rgba(0,0,0,0.5);
+  border-color:rgba(59,130,246,0.4);
 }
-.login-input {
-  width: 100%;
-  padding: 12px;
-  margin-bottom: 12px;
-  border-radius: 8px;
-  border: none;
-  font-size: 0.95rem;
+
+/* =========================================
+   Card Content
+========================================= */
+
+.coach-icon{
+  font-size:2.5rem;
+  margin-bottom:15px;
+  transition:0.3s ease;
+}
+
+.coach-card:hover .coach-icon{
+  transform:scale(1.2);
+}
+
+.coach-title{
+  font-size:1.25rem;
+  font-weight:700;
+  margin-bottom:8px;
+}
+
+.coach-desc{
+  font-size:0.95rem;
+  color:var(--muted);
+}
+
+/* =========================================
+   Logout Button
+========================================= */
+
+.logout-btn{
+  padding:14px 28px;
+  border-radius:14px;
+  border:none;
+  cursor:pointer;
+  background:linear-gradient(90deg, var(--danger), #dc2626);
+  color:white;
+  font-size:0.95rem;
+  font-weight:600;
+  transition:0.3s ease;
+}
+
+.logout-btn:hover{
+  transform:translateY(-3px);
+  box-shadow:0 12px 30px rgba(239,68,68,0.4);
+}
+
+/* =========================================
+   Mobile polish
+========================================= */
+
+@media(max-width:600px){
+  .coach-header h1{
+    font-size:32px;
+  }
+
+  .coach-card{
+    padding:30px 20px;
+  }
 }
