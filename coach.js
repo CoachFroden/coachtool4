@@ -81,6 +81,63 @@ onAuthStateChanged(auth, async (user) => {
     window.location.href = "./fremside.html";
     return;
   }
+  
+  // ==============================
+// Push-status indikator (diskré)
+// ==============================
+
+function renderPushStatus(user) {
+  let badge = document.getElementById("pushStatusBadge");
+
+  if (!badge) {
+    badge = document.createElement("button");
+    badge.id = "pushStatusBadge";
+    badge.style.position = "fixed";
+    badge.style.bottom = "14px";
+    badge.style.right = "14px";
+    badge.style.padding = "8px 12px";
+    badge.style.borderRadius = "20px";
+    badge.style.fontSize = "0.85rem";
+    badge.style.border = "none";
+    badge.style.boxShadow = "0 2px 6px rgba(0,0,0,0.2)";
+    badge.style.zIndex = "9999";
+    document.body.appendChild(badge);
+  }
+
+  const permission = Notification.permission;
+
+  if (permission === "granted") {
+    badge.textContent = "🟢 Varsler aktivert";
+    badge.style.background = "#2ecc71";
+    badge.style.color = "white";
+    badge.style.cursor = "default";
+    badge.disabled = true;
+  }
+
+  else if (permission === "denied") {
+    badge.textContent = "🔴 Varsler blokkert";
+    badge.style.background = "#e74c3c";
+    badge.style.color = "white";
+    badge.style.cursor = "not-allowed";
+    badge.disabled = true;
+  }
+
+  else {
+    badge.textContent = "🔴 Aktiver varsler";
+    badge.style.background = "#e74c3c";
+    badge.style.color = "white";
+    badge.style.cursor = "pointer";
+    badge.disabled = false;
+
+    badge.onclick = async () => {
+      await setupCoachPush(user);
+      renderPushStatus(user); // oppdater etter klikk
+    };
+  }
+}
+
+// kall den
+renderPushStatus(user);
 
   // ✅ Riktig sted: bare coach
  // await setupCoachPush(user);
