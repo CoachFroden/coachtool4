@@ -83,41 +83,46 @@ onAuthStateChanged(auth, async (user) => {
   }
   
   // ==============================
-// Push-status indikator (diskré)
-// ==============================
-
-const header = document.getElementById("coachHeader");
-
-function updateHeaderStatus() {
-  const permission = Notification.permission;
-
-  if (permission === "granted") {
-    header.textContent = "Coach Dashboard – Varsler aktivert";
-    header.style.color = "#2ecc71";
-    header.style.cursor = "default";
-    header.onclick = null;
+  // Push-status i overskrift
+  // ==============================
+  const header = document.getElementById("coachHeader");
+  if (!header) {
+    console.warn("Fant ikke #coachHeader i HTML.");
+    return;
   }
 
-  else if (permission === "denied") {
-    header.textContent = "Coach Dashboard – Varsler blokkert";
-    header.style.color = "#e74c3c";
-    header.style.cursor = "default";
-    header.onclick = null;
+  function setHeaderColor(color) {
+    // tåler CSS som overstyrer
+    header.style.setProperty("color", color, "important");
   }
 
-  else {
-    header.textContent = "Coach Dashboard – Aktiver varsler";
-    header.style.color = "#e74c3c";
-    header.style.cursor = "pointer";
+  function updateHeaderStatus() {
+    const permission = Notification.permission;
 
-    header.onclick = async () => {
-      await setupCoachPush(user);
-      updateHeaderStatus();
-    };
+    if (permission === "granted") {
+      header.textContent = "Coach Dashboard – Varsler aktivert";
+      setHeaderColor("#2ecc71");
+      header.style.cursor = "default";
+      header.onclick = null;
+    } else if (permission === "denied") {
+      header.textContent = "Coach Dashboard – Varsler blokkert";
+      setHeaderColor("#e74c3c");
+      header.style.cursor = "default";
+      header.onclick = null;
+    } else {
+      header.textContent = "Coach Dashboard – Aktiver varsler";
+      setHeaderColor("#e74c3c");
+      header.style.cursor = "pointer";
+      header.onclick = async () => {
+        await setupCoachPush(user);
+        updateHeaderStatus();
+      };
+    }
   }
-}
 
-updateHeaderStatus();
+  updateHeaderStatus();
+
+}); // ✅ VIKTIG: lukker onAuthStateChanged
 
 /* ==============================
    Logout
