@@ -708,10 +708,11 @@ function renderStatsSelector(matches) {
     `;
   });
 
-  html += `
+ html += `
       </select>
     </div>
     <div id="statsContent"></div>
+    <div id="matchDetailsArea"></div>
   `;
 
   entriesEl.innerHTML = html;
@@ -721,16 +722,21 @@ function renderStatsSelector(matches) {
   // Vis total først
   renderStatsContent(matches);
 
-  select.addEventListener("change", () => {
+select.addEventListener("change", () => {
 
-    if (select.value === "total") {
-      renderStatsContent(matches);
-    } else {
-      const singleMatch = matches.filter(m => m.id === select.value);
-      renderStatsContent(singleMatch);
-    }
+  const detailsArea = document.getElementById("matchDetailsArea");
+  if (detailsArea) detailsArea.innerHTML = "";
 
-  });
+  if (select.value === "total") {
+    renderStatsContent(matches);
+  } else {
+    const singleMatch = matches.filter(m => m.id === select.value);
+    renderStatsContent(singleMatch);
+
+    renderDetailsButton(singleMatch[0]); // 🔥 ny linje
+  }
+
+});
 }
 
 function renderStatsContent(matches) {
@@ -883,6 +889,58 @@ function renderStatsTable(stats, targetId = null) {
   `;
 
   container.innerHTML = html;
+}
+
+function renderDetailsButton(match) {
+  const area = document.getElementById("matchDetailsArea");
+  if (!match || !area) return;
+
+  area.innerHTML = `
+    <div class="item" style="margin-top:10px;">
+      <button id="showMatchDetailsBtn" class="btn" style="width:100%;">
+        Detaljer
+      </button>
+      <div id="matchDetailsBox" style="display:none; margin-top:10px;"></div>
+    </div>
+  `;
+
+  const btn = document.getElementById("showMatchDetailsBtn");
+  const box = document.getElementById("matchDetailsBox");
+
+  btn.addEventListener("click", () => {
+    const isHidden = box.style.display === "none";
+    box.style.display = isHidden ? "block" : "none";
+
+    if (!isHidden) return;
+
+    box.innerHTML = renderMatchDetails(match);
+  });
+}
+
+function renderMatchDetails(match) {
+
+  const events = match.events || [];
+
+  if (!events.length) {
+    return `<div class="itemSub">Ingen hendelser registrert.</div>`;
+  }
+
+  let html = `<div class="itemSub" style="opacity:.95;">`;
+
+  // Vi viser hendelsene i kronologisk rekkefølge (eldst først)
+  const sorted = [...events].reverse();
+
+  sorted.forEach(e => {
+    html += `
+      <div style="margin-bottom:6px;">
+        ${escapeHtml(e.text || "")}
+      </div>
+    `;
+  });
+
+  html += `</div>`;
+
+  return html;
 }
 
 document.addEventListener("click", (e) => {
