@@ -1,0 +1,284 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ============================
+    // TRENERHJØRNET
+    // ============================
+
+    match /spillere/{playerId} {
+
+  allow read: if true;
+
+  allow update: if request.auth != null
+    && (
+      // Spiller kan oppdatere sitt eget dokument
+      request.auth.uid == resource.data.uid
+
+      ||
+
+      // Coach kan oppdatere
+      get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "coach"
+    );
+
+  allow create, delete: if false;
+}
+
+// ============================
+// UTVIKLINGSPLAN / EVALUERINGER
+// ============================
+
+match /evalueringer/{docId} {
+
+  allow read: if request.auth != null
+    && (
+      // Spiller kan lese sin egen plan
+      resource.data.uid == request.auth.uid
+
+      ||
+
+      // Coach kan lese alle
+      get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "coach"
+    );
+
+  allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "coach";
+}
+
+    
+    // ==========================
+// MATCHES – COACH (EMAIL VERIFIED)
+// ==========================
+match /users/{userId}/matches/{matchId} {
+  allow read, write: if request.auth != null
+    && request.auth.uid == userId
+    && request.auth.token.email_verified == true;
+}
+
+
+    // ============================
+    // USERS (registrering)
+    // ============================
+
+match /users/{userId} {
+
+  // 🔓 Alle kan lese users (som før)
+  allow read: if true;
+
+  // 👤 Bruker kan opprette sitt eget dokument
+  allow create: if request.auth != null
+                && request.auth.uid == userId;
+
+  // 👤 Bruker kan oppdatere EGNE, UFARLIGE felt
+  allow update: if request.auth != null
+  && request.auth.uid == userId
+  && !request.resource.data
+       .diff(resource.data)
+       .changedKeys()
+       .hasAny(['role', 'approved']);
+
+  // 🧑‍🏫 Trener kan KUN godkjenne (approved)
+  allow update: if request.auth != null
+                && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "coach"
+                && request.resource.data.diff(resource.data).changedKeys().hasOnly(['approved']);
+
+  // ❌ Ingen sletting
+  allow delete: if false;
+}
+
+    // ============================
+    // ADMIN TOKENS (push – kun coach)
+    // ============================
+match /adminTokens/{uid} {
+  allow read, write: if request.auth != null
+    && request.auth.uid == uid
+    && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "coach";
+}
+
+
+// ============================
+// REFLEKSJONER
+// ============================
+
+match /refleksjoner/{playerId} {
+
+  // 🔹 Trener kan lese / spiller kan lese sitt eget
+  allow get, list: if request.auth != null
+    && (
+      request.auth.uid == playerId ||
+      get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "coach"
+    );
+
+  // 🔹 Spilleren kan opprette sitt eget parent-dokument
+  allow create: if request.auth != null
+    && request.auth.uid == playerId
+    && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.approved == true;
+
+  // ✅ VIKTIG: Spilleren kan OPPDATERE sitt eget parent-dokument
+  allow update: if request.auth != null
+    && request.auth.uid == playerId;
+
+  // ❌ Ingen sletting
+  allow delete: if false;
+
+
+  // ============================
+  // UKEREFLEKSJONER
+  // ============================
+  match /entries/{entryId} {
+
+    // Spiller kan opprette ukerefleksjon
+    allow create: if request.auth != null
+      && request.auth.uid == playerId
+      && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.approved == true;
+
+  // Spiller eller coach kan oppdatere
+ allow update: if request.auth != null
+    && (
+     request.auth.uid == playerId ||
+     get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "coach"
+ );
+
+    // Trener og spiller kan lese
+    allow get, list: if request.auth != null
+      && (
+        request.auth.uid == playerId ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "coach"
+      );
+
+    // ❌ Ingen sletting
+    allow delete: if false;
+
+
+    // ============================
+    // HISTORIKK
+    // ============================
+    match /updates/{updateId} {
+
+      // Spiller kan logge egne oppdateringer
+      allow create: if request.auth != null
+        && request.auth.uid == playerId;
+
+      // Trener og spiller kan lese historikk
+      allow get, list: if request.auth != null
+        && (
+          request.auth.uid == playerId ||
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "coach"
+        );
+
+      // ❌ Ingen endring eller sletting
+      allow update, delete: if false;
+    }
+  }
+}
+    // ============================
+    // SESONGMÅL
+    // ============================
+
+    match /seasonGoals/{userId} {
+  allow create: if request.auth != null;
+  allow update: if request.auth != null;
+  allow read: if request.auth != null;
+}
+
+    // ============================
+    // AI ANALYSE (kun coach)
+    // ============================
+
+    match /aiAnalysis/{playerId} {
+
+      allow read: if request.auth != null
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "coach";
+
+      allow write: if request.auth != null
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "coach";
+    }
+
+    // ============================
+    // UTVIKLINGSPLAN (kun coach)
+    // ============================
+
+    match /utviklingsplan/{playerId} {
+
+  allow read: if request.auth != null
+    && (
+      request.auth.uid == playerId
+      ||
+      get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "coach"
+    );
+
+  allow write: if request.auth != null
+    && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "coach";
+
+
+  // 🔹 HISTORIKK MÅ LIGGE HER
+  match /historikk/{docId} {
+
+    allow read: if request.auth != null
+      && (
+        request.auth.uid == playerId
+        ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "coach"
+      );
+
+    allow create: if request.auth != null
+      && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "coach";
+
+    allow update, delete: if false;
+  }
+}
+
+    // ============================
+    // FEEDBACK (coach → spiller)
+    // ============================
+
+    match /feedback/{docId} {
+
+      // Coach kan lese og skrive alt
+      allow read, create, update, delete: if request.auth != null
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "coach";
+
+      // Spiller kan lese sine egne SENDTE
+      allow read: if request.auth != null
+        && resource.data.playerId == request.auth.uid
+        && resource.data.status == "sent";
+    }
+
+    
+    // ============================
+    // PUBLIC STATISTIKK
+    // ============================
+
+    match /users/{userId}/matches/{matchId} {
+      // 🔓 Public: alle kan lese kampdata
+      allow read: if true;
+
+      // 🔒 Kun eier (trener) kan skrive
+      allow write: if request.auth != null
+                    && request.auth.uid == userId;
+    }
+
+    match /kampanalyser/{docId} {
+      // Beholder eksisterende åpne regler
+      allow read, write: if true;
+    }
+
+    // ============================
+    // PUBLIC MATCH STATISTIKK
+    // ============================
+
+    match /publicMatches/{matchId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    
+    // =================
+    // BEEPTEST
+    // =================
+    match /beeptestResults/{docId} {
+      allow read, write: if true;
+    }
+
+  }
+}
+
+         

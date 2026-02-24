@@ -13,7 +13,11 @@ import {
   query,
   orderBy,
   limit,
-  where
+  where,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
 
 const userLine = document.getElementById("userLine");
@@ -33,6 +37,7 @@ const selectedPlayerEl = document.getElementById("selectedPlayer");
 
 
 let utviklingsbank = {};
+let openPlayedMatchId = null;
 
 async function loadUtviklingsbank() {
   const response = await fetch("utviklingsbank.json");
@@ -522,9 +527,22 @@ function formatDateStringNo(isoDate) {
 }
 
 async function loadPlayedMatches(coachUid) {
+	
   setError("");
   selectedPlayerEl.textContent = "Spilte kamper";
-  entriesEl.innerHTML = `<div class="item">Laster spilte kamper…</div>`;
+entriesEl.innerHTML = `
+  <div class="item">
+    <div style="display:flex; gap:22px; padding:4px 2px; margin-bottom:12px;">
+      <button class="typeFilterBtn active" data-type="all">Alle</button>
+      <button class="typeFilterBtn" data-type="league">Seriekamp</button>
+      <button class="typeFilterBtn" data-type="cup">Cupkamp</button>
+      <button class="typeFilterBtn" data-type="friendly">Treningskamp</button>
+    </div>
+  </div>
+  <div id="playedMatchesContainer"></div>
+`;
+
+const container = document.getElementById("playedMatchesContainer");
 
   try {
     const matchesRef = collection(db, "matches");
@@ -545,32 +563,99 @@ async function loadPlayedMatches(coachUid) {
       const hasScore = Number.isFinite(our) && Number.isFinite(their);
       if (!hasScore) return; // bare ferdige kamper
 
-      rows.push({ opponent, date, venue, our, their, result: m.result });
+rows.push({
+  id: d.id,
+  opponent,
+  date,
+  venue,
+  our,
+  their,
+  result: m.result,
+  type: m?.meta?.type || null
+});
     });
 	
-    rows.sort((a, b) => (b.date || "").localeCompare(a.date || "")); 
-    if (rows.length === 0) {
-      entriesEl.innerHTML = `<div class="item">Ingen spilte kamper funnet.</div>`;
-      return;
-    }
+ rows.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
 
-    entriesEl.innerHTML = "";
-    rows.forEach(m => {
-      const div = document.createElement("div");
-      div.className = "item";
-      div.innerHTML = `
-        <div class="itemTitle">${m.opponent}</div>
-<div class="itemSub">
-  ${formatDateStringNo(m.date)} · 
-  ${placeLabelFromVenue(m.venue)} · 
-  ${m.our}–${m.their}
-  ${m.our > m.their ? " · Seier" :
-    m.our < m.their ? " · Tap" :
-    " · Uavgjort"}
-</div>
-      `;
-      entriesEl.appendChild(div);
-    });
+let activeType = "all";
+
+function renderFiltered() {
+  container.innerHTML = "";
+
+const filtered = rows.filter(m => {
+
+  if (activeType === "all") return true;
+
+  if (!m.type) return false;
+
+  if (activeType === "league")
+    return m.type === "league" || m.type === "Seriekamp";
+
+  if (activeType === "cup")
+    return m.type === "cup" || m.type === "Cupkamp";
+
+  if (activeType === "friendly")
+    return m.type === "friendly" || m.type === "Treningskamp";
+
+  return false;
+});
+
+  if (!filtered.length) {
+    container.innerHTML = `<div class="item">Ingen kamper av valgt type.</div>`;
+    return;
+  }
+
+  filtered.forEach(m => {
+    const div = document.createElement("div");
+    div.className = "item";
+	
+div.style.cursor = "pointer";
+div.addEventListener("click", () => {
+  showPlayedMatchDetails(m.id, div);
+});
+
+const resultLabel =
+  m.our > m.their ? "Seier" :
+  m.our < m.their ? "Tap" :
+  "Uavgjort";
+  
+  const resultClass =
+  m.our > m.their ? "result-win" :
+  m.our < m.their ? "result-loss" :
+  "result-draw";
+  
+const venueText =
+  m.venue === "home" ? "Hjemme" :
+  m.venue === "away" ? "Borte" :
+  "";
+
+div.innerHTML = `
+  <div class="itemTitle">${m.opponent}</div>
+  <div class="itemSub">
+    ${formatDateStringNo(m.date)} • 
+    ${venueText} • 
+    ${m.our}-${m.their} • 
+    <span class="${resultClass}">${resultLabel}</span>
+  </div>
+`;
+    container.appendChild(div);
+  });
+}
+
+renderFiltered();
+
+document.querySelectorAll(".typeFilterBtn").forEach(btn => {
+  btn.addEventListener("click", () => {
+
+    document.querySelectorAll(".typeFilterBtn")
+      .forEach(b => b.classList.remove("active"));
+
+    btn.classList.add("active");
+    activeType = btn.dataset.type;
+
+    renderFiltered();
+  });
+});
 
   } catch (e) {
     entriesEl.innerHTML = `<div class="item">Kunne ikke hente spilte kamper.</div>`;
@@ -638,7 +723,114 @@ matchSelect.addEventListener("change", async () => {
 async function loadUpcomingMatches() {
   setError("");
   selectedPlayerEl.textContent = "Kommende kamper";
-  entriesEl.innerHTML = `<div class="item">Laster kommende kamper…</div>`;
+  
+  entriesEl.innerHTML = `
+  <div class="item">
+    <button id="addUpcomingMatchBtn" class="statsSelect addMatchBtn" style="width:100%;">
+      Legg til kamp
+    </button>
+  </div>
+  <div id="addMatchFormContainer"></div>
+`;
+
+const addBtn = document.getElementById("addUpcomingMatchBtn");
+const formContainer = document.getElementById("addMatchFormContainer");
+
+if (addBtn && formContainer) {
+  addBtn.addEventListener("click", () => {
+    const isOpen = formContainer.innerHTML.trim() !== "";
+
+    if (isOpen) {
+      formContainer.innerHTML = "";
+      return;
+    }
+
+    formContainer.innerHTML = `
+      <div class="item" style="margin-top:10px;">
+        <div class="itemTitle">Ny kamp</div>
+
+<div class="itemSub" style="margin-top:8px;">
+  <input id="opponentInput" class="playerSelect" placeholder="Motstander" />
+</div>
+
+        <div class="itemSub" style="margin-top:8px;">
+  <select id="venueTypeInput" class="playerSelect">
+    <option value="">Hjemme eller borte?</option>
+    <option value="home">Hjemme</option>
+    <option value="away">Borte</option>
+  </select>
+</div>
+
+<div class="itemSub" style="margin-top:8px;">
+  <input id="venueNameInput" class="playerSelect" placeholder="Stedsnavn (valgfritt)" />
+</div>
+		
+		<div class="itemSub" style="margin-top:8px;">
+  <input id="dateInput" type="date" class="playerSelect" />
+</div>
+
+        <div class="itemSub" style="margin-top:8px;">
+          <input id="timeInput" type="time" class="playerSelect" />
+        </div>
+
+        <div class="itemSub" style="margin-top:8px;">
+          <select id="typeInput" class="playerSelect">
+  <option value="">Type kamp</option>
+  <option value="league">Seriekamp</option>
+  <option value="cup">Cupkamp</option>
+  <option value="friendly">Treningskamp</option>
+</select>
+        </div>
+
+        <div style="display:flex; gap:8px; margin-top:10px;">
+          <button id="saveMatchBtn" class="statsSelect" style="flex:1;">Lagre</button>
+          <button id="cancelMatchBtn" class="statsSelect" style="flex:1;">Avbryt</button>
+        </div>
+      </div>
+    `;
+
+document.getElementById("cancelMatchBtn").onclick = () => {
+  formContainer.innerHTML = "";
+};
+
+document.getElementById("saveMatchBtn").onclick = async () => {
+
+  const opponent = document.getElementById("opponentInput").value.trim();
+  const venueType = document.getElementById("venueTypeInput").value;
+  const venueName = document.getElementById("venueNameInput").value.trim();
+  const date = document.getElementById("dateInput").value;
+  const time = document.getElementById("timeInput").value;
+  const type = document.getElementById("typeInput").value;
+
+  if (!opponent || !venueType || !date || !time || !type) {
+    alert("Fyll ut alle feltene.");
+    return;
+  }
+
+  try {
+    await addDoc(collection(db, "matches"), {
+meta: {
+  opponent,
+  venueType,
+  venueName,
+  date,
+  time,
+  type
+},
+      status: "UPCOMING",
+      createdAt: serverTimestamp()
+    });
+
+    formContainer.innerHTML = "";
+    await loadUpcomingMatches();
+
+  } catch (e) {
+    console.error(e);
+    alert("Kunne ikke lagre kamp.");
+  }
+};
+  });
+}
 
   try {
     const matchesRef = collection(db, "matches");
@@ -648,32 +840,49 @@ async function loadUpcomingMatches() {
     snap.forEach(d => {
       const m = d.data() || {};
       if (m.status === "UPCOMING") {
-        rows.push({
-          opponent: m?.meta?.opponent || "(ukjent)",
-          date: m?.meta?.date || null,
-          venue: m?.meta?.venue || null
-        });
+rows.push({
+  id: d.id,   // ← VIKTIG
+  opponent: m?.meta?.opponent || "(ukjent)",
+  date: m?.meta?.date || null,
+  time: m?.meta?.time || "",
+  venueType: m?.meta?.venueType || null,
+  venueName: m?.meta?.venueName || ""
+});
       }
     });
 
     // sorter alfabetisk på motstander (siden dato ofte mangler)
     rows.sort((a, b) => (a.opponent || "").localeCompare(b.opponent || "", "no"));
 
-    if (rows.length === 0) {
-      entriesEl.innerHTML = `<div class="item">Ingen kommende kamper funnet.</div>`;
-      return;
-    }
+if (rows.length === 0) {
+  const emptyDiv = document.createElement("div");
+  emptyDiv.className = "item";
+  emptyDiv.textContent = "Ingen kommende kamper funnet.";
+  entriesEl.appendChild(emptyDiv);
+  return;
+}
 
-    entriesEl.innerHTML = "";
-    rows.forEach(m => {
+rows.forEach(m => {
+	
       const div = document.createElement("div");
       div.className = "item";
+	  div.style.cursor = "pointer";
+div.addEventListener("click", () => openEditUpcomingMatch(m));
       div.innerHTML = `
         <div class="itemTitle">${m.opponent}</div>
-        <div class="itemSub">
-          ${m.date ? formatDateStringNo(m.date) : "Dato ikke satt"} ·
-          ${m.venue ? placeLabelFromVenue(m.venue) : "Sted ikke satt"}
-        </div>
+<div class="itemSub">
+  ${m.date ? formatDateStringNo(m.date) : "Dato ikke satt"}
+  ${m.time ? " kl. " + m.time : ""}
+  ·
+  ${
+    m.venueType === "home"
+      ? "Hjemme"
+      : m.venueType === "away"
+      ? "Borte"
+      : "Ukjent"
+  }
+  ${m.venueName ? " – " + m.venueName : ""}
+</div>
       `;
       entriesEl.appendChild(div);
     });
@@ -691,52 +900,134 @@ function renderStatsSelector(matches) {
     return;
   }
 
-  // Bygg dropdown
-  let html = `
+  let activeType = "all";
+
+  function filterMatchesByType(list) {
+
+    if (activeType === "all") return list;
+
+    return list.filter(m => {
+      const type = m.meta?.type;
+
+      if (!type) return false;
+
+      if (activeType === "league")
+        return type === "league" || type === "Seriekamp";
+
+      if (activeType === "cup")
+        return type === "cup" || type === "Cupkamp";
+
+      if (activeType === "friendly")
+        return type === "friendly" || type === "Treningskamp";
+
+      return false;
+    });
+  }
+
+  function buildDropdown(filteredMatches) {
+
+    let options = `<option value="total">Total</option>`;
+
+filteredMatches.forEach(m => {
+
+  const date = m.meta?.date ? formatDateStringNo(m.meta.date) : "";
+  const opponent = m.meta?.opponent || "";
+
+  const our = m.score?.our;
+  const their = m.score?.their;
+
+  let resultLabel = "";
+
+  if (Number.isFinite(our) && Number.isFinite(their)) {
+    if (our > their) resultLabel = "Seier";
+    else if (our < their) resultLabel = "Tap";
+    else resultLabel = "Uavgjort";
+  }
+
+const venueText =
+  m.meta?.venue === "home" ? "Hjemme" :
+  m.meta?.venue === "away" ? "Borte" :
+  "";
+
+options += `
+  <option value="${m.id}">
+    ${opponent} — ${date} • ${venueText} • ${our}-${their} • ${resultLabel}
+  </option>
+`;
+});
+
+    document.getElementById("statsMatchSelect").innerHTML = options;
+  }
+
+  // 🔹 Bygg UI én gang
+  entriesEl.innerHTML = `
     <div class="item">
-      <select id="statsMatchSelect" class="playerSelect statsSelect">
-        <option value="total">Total</option>
-  `;
+      <div class="statsTypeRow">
+        <button class="statsTypeBtn active" data-type="all">Alle</button>
+        <button class="statsTypeBtn" data-type="league">Seriekamp</button>
+        <button class="statsTypeBtn" data-type="cup">Cupkamp</button>
+        <button class="statsTypeBtn" data-type="friendly">Treningskamp</button>
+      </div>
 
-  matches.forEach(m => {
-    const date = m.meta?.date || "";
-    const opponent = m.meta?.opponent || "";
-    html += `
-      <option value="${m.id}">
-        ${date} - ${opponent}
-      </option>
-    `;
-  });
-
- html += `
-      </select>
+      <select id="statsMatchSelect" class="playerSelect statsSelect"></select>
     </div>
+
     <div id="statsContent"></div>
     <div id="matchDetailsArea"></div>
   `;
 
-  entriesEl.innerHTML = html;
-
   const select = document.getElementById("statsMatchSelect");
 
-  // Vis total først
-  renderStatsContent(matches);
+  function renderAll() {
 
-select.addEventListener("change", () => {
+    const filteredMatches = filterMatchesByType(matches);
 
-  const detailsArea = document.getElementById("matchDetailsArea");
-  if (detailsArea) detailsArea.innerHTML = "";
+    buildDropdown(filteredMatches);
 
-  if (select.value === "total") {
-    renderStatsContent(matches);
-  } else {
-    const singleMatch = matches.filter(m => m.id === select.value);
-    renderStatsContent(singleMatch);
+    renderStatsContent(filteredMatches);
 
-    renderDetailsButton(singleMatch[0]); // 🔥 ny linje
+    const detailsArea = document.getElementById("matchDetailsArea");
+    if (detailsArea) detailsArea.innerHTML = "";
+
+    select.value = "total";
   }
 
-});
+  // 🔹 Type-knapper
+  document.querySelectorAll(".statsTypeBtn").forEach(btn => {
+    btn.addEventListener("click", () => {
+
+      document.querySelectorAll(".statsTypeBtn")
+        .forEach(b => b.classList.remove("active"));
+
+      btn.classList.add("active");
+      activeType = btn.dataset.type;
+
+      renderAll();
+    });
+  });
+
+  // 🔹 Dropdown
+  select.addEventListener("change", () => {
+
+    const filteredMatches = filterMatchesByType(matches);
+    const detailsArea = document.getElementById("matchDetailsArea");
+    if (detailsArea) detailsArea.innerHTML = "";
+
+    if (select.value === "total") {
+      renderStatsContent(filteredMatches);
+    } else {
+      const singleMatch = filteredMatches.find(m => m.id === select.value);
+
+      if (singleMatch) {
+        renderStatsContent([singleMatch]);
+        renderDetailsButton(singleMatch);
+      }
+    }
+
+  });
+
+  // 🔹 Default render
+  renderAll();
 }
 
 function renderStatsContent(matches) {
@@ -762,6 +1053,22 @@ onAuthStateChanged(auth, async (user) => {
   }
 
   const role = snap.data()?.role;
+  
+const coachOnlyBtn = document.getElementById("coachOnlyBtn");
+
+if (coachOnlyBtn) {
+  // Skjul alltid først
+  coachOnlyBtn.style.display = "none";
+
+  if (role === "coach") {
+    coachOnlyBtn.style.display = "inline-block";
+
+    coachOnlyBtn.onclick = () => {
+      window.location.href = "fremside.html";
+    };
+  }
+}
+  
 if (roleLine) {
   roleLine.textContent = `Rolle: ${role || "ukjent"}`;
 }
@@ -941,6 +1248,159 @@ function renderMatchDetails(match) {
   html += `</div>`;
 
   return html;
+}
+
+async function showPlayedMatchDetails(matchId, clickedDiv) {
+
+  // Hvis samme kamp klikkes igjen → lukk
+  if (openPlayedMatchId === matchId) {
+    const existingDetails = clickedDiv.nextElementSibling;
+    if (existingDetails && existingDetails.classList.contains("matchDetailsBlock")) {
+      existingDetails.remove();
+    }
+    openPlayedMatchId = null;
+    return;
+  }
+
+  // Hvis en annen kamp er åpen → lukk den først
+  const oldDetails = document.querySelector(".matchDetailsBlock");
+  if (oldDetails) oldDetails.remove();
+
+  openPlayedMatchId = matchId;
+
+  try {
+    const snap = await getDoc(doc(db, "matches", matchId));
+    if (!snap.exists()) return;
+
+    const match = snap.data();
+
+    const detailsDiv = document.createElement("div");
+    detailsDiv.className = "item matchDetailsBlock";
+    detailsDiv.style.marginTop = "6px";
+
+    detailsDiv.innerHTML = `
+      <div class="itemSub" style="margin-bottom:6px;">
+        ${formatDateStringNo(match.meta?.date)} ·
+        ${placeLabelFromVenue(match.meta?.venue)} ·
+        ${match.score?.our ?? 0}–${match.score?.their ?? 0}
+      </div>
+      ${renderMatchDetails(match)}
+    `;
+
+    clickedDiv.after(detailsDiv);
+
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+function openEditUpcomingMatch(match) {
+
+  const formContainer = document.getElementById("addMatchFormContainer");
+  if (!formContainer) return;
+
+  formContainer.innerHTML = `
+    <div class="item" style="margin-top:10px;">
+      <div class="itemTitle">Rediger kamp</div>
+
+      <div class="itemSub" style="margin-top:8px;">
+        <input id="opponentInput" class="playerSelect" placeholder="Motstander"
+          value="${escapeHtml(match.opponent || "")}" />
+      </div>
+
+      <div class="itemSub" style="margin-top:8px;">
+        <select id="venueTypeInput" class="playerSelect">
+          <option value="">Hjemme eller borte?</option>
+          <option value="home" ${match.venueType === "home" ? "selected" : ""}>Hjemme</option>
+          <option value="away" ${match.venueType === "away" ? "selected" : ""}>Borte</option>
+        </select>
+      </div>
+
+      <div class="itemSub" style="margin-top:8px;">
+        <input id="venueNameInput" class="playerSelect"
+          placeholder="Stedsnavn (valgfritt)"
+          value="${escapeHtml(match.venueName || "")}" />
+      </div>
+
+      <div class="itemSub" style="margin-top:8px;">
+        <input id="dateInput" type="date" class="playerSelect"
+          value="${match.date || ""}" />
+      </div>
+
+      <div class="itemSub" style="margin-top:8px;">
+        <input id="timeInput" type="time" class="playerSelect"
+          value="${match.time || ""}" />
+      </div>
+
+<div class="actionRow">
+  <button id="updateMatchBtn" class="updateBtn">Oppdater</button>
+  <button id="deleteMatchBtn" class="deleteBtn">Slett</button>
+  <button id="cancelMatchBtn" class="cancelBtn">Avbryt</button>
+</div>
+    </div>
+  `;
+
+  document.getElementById("cancelMatchBtn").onclick = () => {
+    formContainer.innerHTML = "";
+  };
+
+  document.getElementById("updateMatchBtn").onclick = async () => {
+    await updateUpcomingMatch(match.id);
+  };
+  
+  document.getElementById("deleteMatchBtn").onclick = async () => {
+
+  const confirmDelete = confirm("Er du sikker på at du vil slette denne kampen?");
+  if (!confirmDelete) return;
+
+  try {
+    await deleteDoc(doc(db, "matches", match.id));
+
+    const formContainer = document.getElementById("addMatchFormContainer");
+    if (formContainer) formContainer.innerHTML = "";
+
+    await loadUpcomingMatches();
+
+  } catch (e) {
+    console.error(e);
+    alert("Kunne ikke slette kamp.");
+  }
+};
+}
+
+async function updateUpcomingMatch(matchId) {
+
+  const opponent = document.getElementById("opponentInput").value.trim();
+  const venueType = document.getElementById("venueTypeInput").value;
+  const venueName = document.getElementById("venueNameInput").value.trim();
+  const date = document.getElementById("dateInput").value;
+  const time = document.getElementById("timeInput").value;
+
+  if (!opponent || !venueType || !date || !time) {
+    alert("Fyll ut alle obligatoriske feltene.");
+    return;
+  }
+
+  try {
+    await updateDoc(doc(db, "matches", matchId), {
+      "meta.opponent": opponent,
+      "meta.venueType": venueType,
+      "meta.venueName": venueName,
+      "meta.date": date,
+      "meta.time": time
+    });
+
+    // Lukk skjema
+    const formContainer = document.getElementById("addMatchFormContainer");
+    if (formContainer) formContainer.innerHTML = "";
+
+    // Reload liste
+    await loadUpcomingMatches();
+
+  } catch (e) {
+    console.error(e);
+    alert("Kunne ikke oppdatere kamp.");
+  }
 }
 
 document.addEventListener("click", (e) => {
