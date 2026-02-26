@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Assistent-kamper</title>
+  <link rel="stylesheet" href="assistant-kamper.css" />
+</head>
+<body>
+
+  <main class="wrap">
+    <header class="topbar">
+      <button class="backBtn" onclick="window.location.href='fremside.html'">← Tilbake</button>
+      <div class="title">
+        <h1>Assistent-kamper</h1>
+        <p id="subLine">Laster…</p>
+      </div>
+      <button id="logoutBtn" class="logoutBtn">Logg ut</button>
+    </header>
+
+    <section class="controls">
+      <select id="assistantSelect" class="select">
+	    <option value="official">Kun official matches</option>
+        <option value="all">Alle assistenter</option>
+      </select>
+
+      <select id="statusSelect" class="select">
+	    <option value="all">Alle statuser</option>
+	    <option value="PENDING">Ikke godkjente</option>
+        <option value="APPROVED">Godkjente</option>  
+        <option value="UPCOMING">UPCOMING</option>
+        <option value="ENDED">ENDED</option>
+		<option value="ARCHIVE">Arkiv (originaler)</option>
+      </select>
+
+      <button id="refreshBtn" class="btn">Oppdater</button>
+    </section>
+
+    <section id="list" class="list">
+      <div class="empty">Laster…</div>
+    </section>
+  </main>
+
+  <script type="module" src="assistant-kamper.js"></script>
+</body>
+</html>

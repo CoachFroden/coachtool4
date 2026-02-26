@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rediger kamp</title>
+  <link rel="stylesheet" href="edit-match.css" />
+</head>
+<body>
+
+  <main class="wrap">
+    <header class="topbar">
+      <button id="backBtn" class="backBtn">← Tilbake</button>
+      <div class="title">
+        <h1>Rediger kamp</h1>
+        <p id="hint">Laster…</p>
+      </div>
+      <button id="logoutBtn" class="logoutBtn">Logg ut</button>
+    </header>
+
+    <section class="card">
+      <div class="grid">
+        <label>
+          Dato
+          <input id="date" type="date" />
+        </label>
+
+        <label>
+          Start
+          <input id="time" type="time" />
+        </label>
+
+        <label class="wide">
+          Motstander
+          <input id="opponent" type="text" placeholder="F.eks. Sotra" />
+        </label>
+
+        <label>
+          Type
+          <select id="type">
+            <option value="">—</option>
+            <option value="league">Seriekamp</option>
+            <option value="cup">Cupkamp</option>
+            <option value="friendly">Treningskamp</option>
+          </select>
+        </label>
+
+        <label>
+          Venue
+          <select id="venue">
+            <option value="">—</option>
+            <option value="home">Hjemme</option>
+            <option value="away">Borte</option>
+          </select>
+        </label>
+
+        <label>
+          Vårt mål
+          <input id="our" type="number" inputmode="numeric" />
+        </label>
+
+        <label>
+          Deres mål
+          <input id="their" type="number" inputmode="numeric" />
+        </label>
+
+        <label class="wide">
+          Status
+          <select id="status">
+            <option value="LIVE">LIVE</option>
+            <option value="ENDED">ENDED</option>
+            <option value="UPCOMING">UPCOMING</option>
+          </select>
+        </label>
+      </div>
+<button id="toggleEventsBtn" class="btn">
+  Vis hendelser
+</button>
+
+<div id="eventsSection" class="hidden">
+  <h3>Hendelser</h3>
+  <div id="eventsList"></div>
+</div>
+
+      <div class="actions">
+        <button id="saveBtn" class="btn primary">Lagre</button>
+        <button id="deleteBtn" class="btn danger">Slett</button>
+      </div>
+    </section>
+
+  </main>
+
+  <script type="module" src="edit-match.js"></script>
+</body>
+</html>

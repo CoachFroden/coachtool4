@@ -1,0 +1,197 @@
+* { box-sizing: border-box; margin:0; padding:0; }
+html, body { height:100%; background:#020617; color:#e5e7eb; font-family: Inter, system-ui, -apple-system, sans-serif; }
+
+.wrap{ max-width: 720px; margin:0 auto; padding:14px; min-height:100vh; }
+
+.topbar{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:10px; padding:10px 4px 14px;
+}
+.title h1{ font-size:1.15rem; font-weight:800; }
+.title p{ opacity:.7; font-size:.85rem; margin-top:2px; }
+
+.backBtn, .logoutBtn{
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.05);
+  color:#e5e7eb;
+  padding:8px 10px;
+  border-radius:12px;
+  cursor:pointer;
+}
+.logoutBtn{ background: transparent; color: rgba(229,231,235,.7); }
+
+.card{
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.05);
+  border-radius: 16px;
+  padding: 12px;
+}
+
+.grid{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+label{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  font-size:.8rem;
+  opacity:.9;
+}
+
+label.wide{ grid-column: 1 / -1; }
+
+input, select{
+  height: 44px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.06);
+  color: #e5e7eb;
+  padding: 0 12px;
+  font-weight: 650;
+}
+
+.actions{
+  display:flex;
+  gap: 10px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.btn{
+  flex:1;
+  min-width: 140px;
+  height: 44px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.06);
+  color:#e5e7eb;
+  font-weight: 800;
+  cursor:pointer;
+}
+
+.btn.primary{
+  background: rgba(37,99,235,.18);
+  border-color: rgba(37,99,235,.35);
+}
+.btn.danger{
+  background: rgba(239,68,68,.16);
+  border-color: rgba(239,68,68,.35);
+}
+
+@media (max-width: 520px){
+  .grid{ grid-template-columns: 1fr; }
+}
+
+/* ===============================
+   EVENTS SECTION
+================================ */
+
+#eventsSection {
+  margin-top: 1.5rem;
+}
+
+#eventsSection h3 {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.6;
+  margin-bottom: 0.6rem;
+}
+
+/* ===============================
+   EVENT ROW
+================================ */
+
+.eventRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  padding: 10px 12px;
+  margin-bottom: 8px;
+
+  border-radius: 12px;
+  background: #0f172a;
+  border: 1px solid rgba(255,255,255,0.05);
+
+  font-size: 0.85rem;
+}
+
+.eventRow span {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ===============================
+   EVENT BUTTONS
+================================ */
+
+.eventRow button {
+  border: none;
+  background: transparent;
+  font-size: 0.9rem;
+  cursor: pointer;
+  opacity: 0.7;
+  padding: 4px;
+}
+
+.eventRow button:hover {
+  opacity: 1;
+}
+
+/* ===============================
+   INLINE EDIT
+================================ */
+
+.eventRow input {
+  flex: 1;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.06);
+  color: #f8fafc;
+  font-size: 0.85rem;
+}
+
+/* Toggle */
+.eventsWrapper.hidden{
+  display: none;
+}
+
+/* ✔ grønn */
+.eventSaveBtn{
+  color: #22c55e;
+}
+.eventSaveBtn:hover{
+  color: #4ade80;
+}
+
+/* ✖ rød */
+.eventCancelBtn{
+  color: #ef4444;
+}
+.eventCancelBtn:hover{
+  color: #f87171;
+}
+
+/* 🗑 lys grå */
+.eventDeleteBtn{
+  color: rgba(255,255,255,.45);
+}
+.eventDeleteBtn:hover{
+  color: rgba(255,255,255,.7);
+}
+
+#eventsSection.hidden{
+  display: none;
+}
+
+#toggleEventsBtn {
+  margin-top: 20px;
+  padding: 0 20px;
+}

@@ -851,8 +851,9 @@ rows.push({
       }
     });
 
-    // sorter alfabetisk på motstander (siden dato ofte mangler)
-    rows.sort((a, b) => (a.opponent || "").localeCompare(b.opponent || "", "no"));
+    rows.sort((a, b) => 
+  (a.date || "").localeCompare(b.date || "")
+);
 
 if (rows.length === 0) {
   const emptyDiv = document.createElement("div");

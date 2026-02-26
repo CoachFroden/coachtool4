@@ -606,3 +606,24 @@ h2 { margin: 0 0 8px; font-size: 18px; }
   }
 
 }
+
+.itemActions{
+  margin-top: 10px;
+  display:flex;
+  justify-content:flex-end;
+}
+
+.miniBtn{
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.06);
+  color: #e5e7eb;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.miniBtn:hover{
+  background: rgba(255,255,255,.12);
+}
