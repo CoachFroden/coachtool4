@@ -851,9 +851,23 @@ rows.push({
       }
     });
 
-    rows.sort((a, b) => 
-  (a.date || "").localeCompare(b.date || "")
-);
+rows.sort((a, b) => {
+
+  const aHasDate = !!a.date;
+  const bHasDate = !!b.date;
+
+  // 1️⃣ Begge har dato → sorter på dato
+  if (aHasDate && bHasDate) {
+    return a.date.localeCompare(b.date);
+  }
+
+  // 2️⃣ Kun én har dato → den med dato først
+  if (aHasDate && !bHasDate) return -1;
+  if (!aHasDate && bHasDate) return 1;
+
+  // 3️⃣ Ingen har dato → sorter alfabetisk på motstander
+  return (a.opponent || "").localeCompare(b.opponent || "", "no");
+});
 
 if (rows.length === 0) {
   const emptyDiv = document.createElement("div");
