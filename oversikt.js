@@ -840,13 +840,15 @@ await addDoc(collection(db, "matches"), {
     snap.forEach(d => {
       const m = d.data() || {};
       if (m.status === "UPCOMING") {
+		  
 rows.push({
-  id: d.id,   // ← VIKTIG
+  id: d.id,
   opponent: m?.meta?.opponent || "(ukjent)",
   date: m?.meta?.date || null,
   time: m?.meta?.time || "",
   venueType: m?.meta?.venueType || null,
-  venueName: m?.meta?.venueName || ""
+  venueName: m?.meta?.venueName || "",
+  type: m?.meta?.type || null   // ← LEGG TIL DENNE
 });
       }
     });
@@ -883,22 +885,26 @@ rows.forEach(m => {
       div.className = "item";
 	  div.style.cursor = "pointer";
 div.addEventListener("click", () => openEditUpcomingMatch(m));
-      div.innerHTML = `
-        <div class="itemTitle">${m.opponent}</div>
-<div class="itemSub">
-  ${m.date ? formatDateStringNo(m.date) : "Dato ikke satt"}
-  ${m.time ? " kl. " + m.time : ""}
-  ·
-  ${
-    m.venueType === "home"
-      ? "Hjemme"
-      : m.venueType === "away"
-      ? "Borte"
-      : "Ukjent"
-  }
-  ${m.venueName ? " – " + m.venueName : ""}
-</div>
-      `;
+div.innerHTML = `
+  <div class="itemTitle">${m.opponent}</div>
+  <div class="itemSub">
+    ${m.type === "league" ? "Seriekamp • " :
+      m.type === "cup" ? "Cupkamp • " :
+      m.type === "friendly" ? "Treningskamp • " : ""}
+    ${m.date ? formatDateStringNo(m.date) : "Dato ikke satt"}
+    ${m.time ? " kl. " + m.time : ""}
+    •
+    ${
+      m.venueType === "home"
+        ? "Hjemme"
+        : m.venueType === "away"
+        ? "Borte"
+        : "Ukjent"
+    }
+    ${m.venueName ? " – " + m.venueName : ""}
+  </div>
+`;
+	  
       entriesEl.appendChild(div);
     });
 
@@ -1346,6 +1352,15 @@ function openEditUpcomingMatch(match) {
         <input id="timeInput" type="time" class="playerSelect"
           value="${match.time || ""}" />
       </div>
+	  
+	  <div class="itemSub" style="margin-top:8px;">
+  <select id="typeInput" class="playerSelect">
+    <option value="">Type kamp</option>
+    <option value="league" ${match.type === "league" ? "selected" : ""}>Seriekamp</option>
+    <option value="cup" ${match.type === "cup" ? "selected" : ""}>Cupkamp</option>
+    <option value="friendly" ${match.type === "friendly" ? "selected" : ""}>Treningskamp</option>
+  </select>
+</div>
 
 <div class="actionRow">
   <button id="updateMatchBtn" class="updateBtn">Oppdater</button>
@@ -1390,20 +1405,22 @@ async function updateUpcomingMatch(matchId) {
   const venueName = document.getElementById("venueNameInput").value.trim();
   const date = document.getElementById("dateInput").value;
   const time = document.getElementById("timeInput").value;
+  const type = document.getElementById("typeInput").value;
 
-  if (!opponent || !venueType || !date || !time) {
-    alert("Fyll ut alle obligatoriske feltene.");
-    return;
-  }
+if (!opponent) {
+  alert("Du må skrive inn motstander.");
+  return;
+}
 
   try {
-    await updateDoc(doc(db, "matches", matchId), {
-      "meta.opponent": opponent,
-      "meta.venueType": venueType,
-      "meta.venueName": venueName,
-      "meta.date": date,
-      "meta.time": time
-    });
+await updateDoc(doc(db, "matches", matchId), {
+  "meta.opponent": opponent,
+  "meta.venueType": venueType,
+  "meta.venueName": venueName,
+  "meta.date": date,
+  "meta.time": time,
+  "meta.type": type || null
+});
 
     // Lukk skjema
     const formContainer = document.getElementById("addMatchFormContainer");
