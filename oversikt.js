@@ -802,24 +802,24 @@ document.getElementById("saveMatchBtn").onclick = async () => {
   const time = document.getElementById("timeInput").value;
   const type = document.getElementById("typeInput").value;
 
-  if (!opponent || !venueType || !date || !time || !type) {
-    alert("Fyll ut alle feltene.");
-    return;
-  }
+  if (!opponent) {
+  alert("Du må skrive inn motstander.");
+  return;
+}
 
   try {
-    await addDoc(collection(db, "matches"), {
-meta: {
-  opponent,
-  venueType,
-  venueName,
-  date,
-  time,
-  type
-},
-      status: "UPCOMING",
-      createdAt: serverTimestamp()
-    });
+await addDoc(collection(db, "matches"), {
+  meta: {
+    opponent,
+    venueType: venueType || null,
+    venueName: venueName || "",
+    date: date || null,
+    time: time || "",
+    type: type || null
+  },
+  status: "UPCOMING",
+  createdAt: serverTimestamp()
+});
 
     formContainer.innerHTML = "";
     await loadUpcomingMatches();
