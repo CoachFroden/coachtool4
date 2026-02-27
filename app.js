@@ -1,5 +1,6 @@
 import { initializeApp } from
   "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  
 import {
   getFirestore,
   collection,
@@ -7,6 +8,7 @@ import {
   getDoc,
   getDocs,
   setDoc,
+  updateDoc,   // ← LEGG TIL DENNE
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
@@ -29,6 +31,7 @@ const firebaseConfig = {
 
 initializeApp(firebaseConfig);
 const auth = getAuth();
+window.auth = auth;
 
 onAuthStateChanged(auth, (user) => {
   if (!user) {
@@ -57,6 +60,8 @@ function setLoginLoading(isLoading) {
    ====================================================== */
 
 const matchState = {
+	matchId: null,
+sourceMatchId: null,
   meta: {
     ourTeam: "",
     opponent: "",
@@ -94,6 +99,17 @@ const matchState = {
 
   events: []
 };
+
+const params = new URLSearchParams(window.location.search);
+const existingMatchId = params.get("matchId");
+
+matchState.sourceMatchId = existingMatchId || null;
+
+matchState.matchId = existingMatchId || null;
+
+if (existingMatchId) {
+  loadExistingMatchMeta(existingMatchId);
+}
 
 
 /* ======================================================
@@ -145,6 +161,9 @@ const timeInput = document.getElementById("matchTime");
 const halfLengthInput = document.getElementById("halfLength");
 
 const startBtn = document.getElementById("startBtn");
+startBtn.disabled = true;
+startBtn.style.opacity = "0.5";
+startBtn.style.pointerEvents = "none";
 const pauseBtn = document.getElementById("pauseBtn");
 const resumeBtn = document.getElementById("resumeBtn");
 const endBtn = document.getElementById("endBtn");
@@ -331,6 +350,29 @@ function readMatchMetaFromUI() {
 
   const typeSelect = document.getElementById("matchType");
   matchState.meta.type = typeSelect ? typeSelect.value : "league";
+}
+
+async function loadExistingMatchMeta(matchId) {
+  const snap = await getDoc(doc(db, "matches", matchId));
+  if (!snap.exists()) return;
+
+  const data = snap.data();
+  const meta = data.meta || {};
+
+  // Fyll feltene
+  awayTeamInput.value = meta.opponent || "";
+  dateInput.value = meta.date || "";
+  timeInput.value = meta.time || "";
+
+  const typeSelect = document.getElementById("matchType");
+  if (typeSelect && meta.type) {
+    typeSelect.value = meta.type;
+  }
+
+  if (meta.venueType) {
+    matchState.meta.venue = meta.venueType;
+    updateVenueToggle();
+  }
 }
 
 const cardHomeWrapper =
@@ -550,6 +592,10 @@ function handleRedCard(playerId, timeMs) {
    ====================================================== */
    
 startBtn.addEventListener("click", async () => {
+	if (!matchState.userRole) {
+  alert("Rolle ikke lastet ennå. Vent litt og prøv igjen.");
+  return;
+}
   if (!auth.currentUser) {
     alert("Du må være logget inn");
     return;
@@ -570,10 +616,40 @@ startBtn.addEventListener("click", async () => {
 }
 
 
+if (!matchState.matchId) {
+  // Ny kamp (manuell)
   matchState.matchId = crypto.randomUUID();
   matchState.createdAt = new Date().toISOString();
+  await saveNewMatch();
+} 
+else {
 
-  await saveNewMatch(); // ⬅️ lagres én gang, kontrollert
+  if (matchState.userRole === "coach") {
+
+    await updateDoc(doc(db, "matches", matchState.matchId), {
+      status: "LIVE"
+    });
+
+  } else if (matchState.userRole === "assistantCoach") {
+
+    const user = auth.currentUser;
+    const newId = matchState.sourceMatchId;
+
+    await setDoc(
+      doc(db, "assistantMatches", user.uid, "matches", newId),
+      {
+        meta: matchState.meta,
+        status: "LIVE",
+        sourceMatchId: matchState.sourceMatchId,
+        createdAt: serverTimestamp(),
+        startedAt: new Date().toISOString(),
+        createdBy: user.uid
+      }
+    );
+
+    matchState.matchId = newId;
+  }
+}
 
   matchState.status = "LIVE";
   matchState.period = 1;
@@ -683,7 +759,29 @@ updateControls();
   addEvent("Kamp ferdig");
   updatePlayingTimeUI();
   
-await saveFinalMatch();
+if (matchState.userRole === "coach") {
+
+  await updateDoc(doc(db, "matches", matchState.matchId), {
+    status: "ENDED",
+    score: matchState.score,
+    endedAt: new Date().toISOString()
+  });
+
+} else if (matchState.userRole === "assistantCoach") {
+
+  const user = auth.currentUser;
+
+  await updateDoc(
+    doc(db, "assistantMatches", user.uid, "matches", matchState.matchId),
+    {
+      status: "ENDED",
+      score: matchState.score,
+      endedAt: new Date().toISOString()
+    }
+  );
+}
+  
+    await saveFinalMatch();
 
   console.log("TOTAL SPILLETID (ms):", matchState.timer.elapsedMs);
 });
@@ -1333,6 +1431,10 @@ if (data.role !== "coach" && !user.emailVerified) {
 
 // ✅ Godkjent – gjør ingenting
 matchState.userRole = data.role;
+
+startBtn.disabled = false;
+startBtn.style.opacity = "1";
+startBtn.style.pointerEvents = "auto";
 
 });
 

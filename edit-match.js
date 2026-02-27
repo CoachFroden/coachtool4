@@ -135,13 +135,20 @@ saveBtn.onclick = async () => {
     });
 
     // 2️⃣ Kopier til matches
-    await setDoc(doc(db, "matches", matchId), {
-      ...d,
-      ...newData,
-      approvedFromAssistant: assistantUid,
-      approvedAt: serverTimestamp(),
-      approvedBy: coachUid
-    }, { merge: true });
+await setDoc(doc(db, "matches", matchId), {
+  ...d,
+  ...newData,
+  status: "ENDED",
+
+  approved: true,
+  approvedToMatches: true,   // ← LEGG TIL DENNE
+
+  approvedAt: serverTimestamp(),
+  approvedBy: auth.currentUser.uid,
+  approvedFromAssistant: assistantUid, // hvis du har den tilgjengelig
+
+  lastEditedAt: serverTimestamp()
+}, { merge: true });
 
     alert("Lagret og godkjent ✅");
     window.location.href = "assistant-kamper.html";

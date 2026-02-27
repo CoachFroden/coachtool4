@@ -158,7 +158,6 @@ for (const a of assistants) {
 const officialMatches = await loadOfficialMatches();
 officialMatches.forEach(m => allRows.push(m));
 
-  subLine.textContent = `Fant ${allRows.length} kamp(er) fra ${assistants.length} assistent(er).`;
 }
 
 function render() {
@@ -170,23 +169,33 @@ function render() {
 
   let rows = [...allRows];
   
+  // SKILL MAIN OG ARCHIVE
+
+if (sFilter === "ARCHIVE") {
+  rows = rows.filter(r =>
+    r.source === "assistant" &&
+    r.approvedToMatches === true
+  );
+} else {
+  rows = rows.filter(r =>
+    !(r.source === "assistant" && r.approvedToMatches === true)
+  );
+}
+  
   console.log("ALL ROWS:", allRows);
 console.log("Archive candidates:",
   allRows.filter(r => r.source === "assistant" && r.approvedToMatches)
 );
   
-  if (sFilter === "all") {
-  rows = rows.filter(r => !(r.source === "assistant" && r.approvedToMatches));
-}
-  
 // --- FILTER START ---
 
-// 1. Assistant filter (ikke bruk på arkiv)
-if (sFilter !== "ARCHIVE") {
+// 1. Assistant filter
+if (aFilter !== "all") {
+
   if (aFilter === "official") {
     rows = rows.filter(r => r.source === "official");
   } 
-  else if (aFilter !== "all") {
+  else {
     rows = rows.filter(r =>
       (r.source === "assistant" && r.assistantUid === aFilter) ||
       (r.source === "official" && r.approvedFromAssistant === aFilter)
@@ -195,12 +204,15 @@ if (sFilter !== "ARCHIVE") {
 }
 
 // 2. Status filter
+if (sFilter !== "ARCHIVE") {
 if (sFilter === "PENDING") {
   rows = rows.filter(r => r.source === "assistant" && !r.approvedToMatches);
 }
 else if (sFilter === "APPROVED") {
-  // anbefalt: kun matches (ferdigbehandlet)
-  rows = rows.filter(r => r.source === "official");
+  rows = rows.filter(r =>
+    r.source === "official" &&
+    r.status === "ENDED"
+  );
 }
 
 else if (sFilter === "UPCOMING") {
@@ -212,39 +224,53 @@ else if (sFilter === "ENDED") {
   rows = rows.filter(r =>
     r.source === "official" && r.status === "ENDED"
   );
+ }
 }
-else if (sFilter === "ARCHIVE") {
-	
-	
-  const officialIds = new Set(
-    allRows
-      .filter(r => r.source === "official")
-      .map(r => r.id)
-  );
-  
-  
-
-  rows = rows.filter(r =>
-    r.source === "assistant" && officialIds.has(r.id)
-  );
-}
-
 // --- FILTER END ---
 
+// etter ALLE filter er kjørt
+
+const totalDocs = allRows.length;
+const totalOfficial = allRows.filter(r => r.source === "official").length;
+
 if (!rows.length) {
+  subLine.textContent =
+    `Offisielle kamper: ${totalOfficial} · Dokumenter totalt: ${totalDocs}`;
   listEl.innerHTML = `<div class="empty">Ingen kamper for valgt filter.</div>`;
   return;
 }
 
-  listEl.innerHTML = "";
+subLine.textContent =
+  `Offisielle kamper: ${totalOfficial} · Dokumenter totalt: ${totalDocs}`;
+
+listEl.innerHTML = "";
 
   rows.forEach(m => {
     const assistantName = assistants.find(a => a.uid === m.assistantUid)?.name || m.assistantUid;
-const approved = (m.source === "official" || !!m.approvedToMatches);
+let approvalLabel = null;
+let approvalClass = null;
+
+if (m.source === "assistant" && !m.approvedToMatches) {
+  approvalLabel = "Ikke godkjent";
+  approvalClass = "bad";
+}
+else if (sFilter === "ARCHIVE" && m.source === "assistant") {
+  approvalLabel = "Behandlet";
+  approvalClass = "ok";
+}
 
     const card = document.createElement("div");
     card.className = "card";
+	
+let approvalTag = "";
 
+if (approvalLabel) {
+  approvalTag = `
+    <span class="tag ${approvalClass}">
+      ${approvalLabel}
+    </span>
+  `;
+}
 card.innerHTML = `
   <div class="row">
     <div class="meta">
@@ -262,9 +288,7 @@ card.innerHTML = `
   <span class="tag warn">
     Status: ${safeText(m.status) || "—"}
   </span>
-  <span class="tag ${approved ? "ok" : "bad"}">
-    ${approved ? "Godkjent" : "Ikke godkjent"}
-  </span>
+${approvalTag}
 </div>
 
   <div class="actions">

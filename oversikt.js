@@ -560,8 +560,7 @@ const container = document.getElementById("playedMatchesContainer");
       const our = m?.score?.our;
       const their = m?.score?.their;
 
-      const hasScore = Number.isFinite(our) && Number.isFinite(their);
-      if (!hasScore) return; // bare ferdige kamper
+if (m.status !== "ENDED") return;
 
 rows.push({
   id: d.id,
@@ -837,9 +836,11 @@ await addDoc(collection(db, "matches"), {
     const snap = await getDocs(matchesRef);
 
     const rows = [];
-    snap.forEach(d => {
-      const m = d.data() || {};
-      if (m.status === "UPCOMING") {
+snap.forEach(d => {
+  const m = d.data() || {};
+
+  // Vis alt som ikke er avsluttet
+  if (m.status !== "ENDED") {
 		  
 rows.push({
   id: d.id,
@@ -887,13 +888,16 @@ rows.forEach(m => {
 div.addEventListener("click", () => openEditUpcomingMatch(m));
 div.innerHTML = `
   <div class="itemTitle">${m.opponent}</div>
+
   <div class="itemSub">
     ${m.type === "league" ? "Seriekamp • " :
       m.type === "cup" ? "Cupkamp • " :
       m.type === "friendly" ? "Treningskamp • " : ""}
     ${m.date ? formatDateStringNo(m.date) : "Dato ikke satt"}
     ${m.time ? " kl. " + m.time : ""}
-    •
+  </div>
+
+  <div class="itemSub">
     ${
       m.venueType === "home"
         ? "Hjemme"
@@ -903,7 +907,16 @@ div.innerHTML = `
     }
     ${m.venueName ? " – " + m.venueName : ""}
   </div>
+
+  <div style="margin-top:8px;">
+    <button class="startMatchBtn">Start kamp</button>
+  </div>
 `;
+
+div.querySelector(".startMatchBtn").addEventListener("click", (e) => {
+  e.stopPropagation(); // viktig
+  window.location.href = `kamp.html?matchId=${m.id}`;
+});
 	  
       entriesEl.appendChild(div);
     });
@@ -1384,7 +1397,9 @@ function openEditUpcomingMatch(match) {
   if (!confirmDelete) return;
 
   try {
-    await deleteDoc(doc(db, "matches", match.id));
+await updateDoc(doc(db, "matches", match.id), {
+  status: "ENDED"
+});
 
     const formContainer = document.getElementById("addMatchFormContainer");
     if (formContainer) formContainer.innerHTML = "";
